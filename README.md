@@ -88,3 +88,24 @@ Then you can track all the values, and actually watch your PID Controller in act
 
 * The twiddle code has been influenced by RobinCPC, from the forums
 * The Q/A video of the project
+
+# Reflection
+
+* The Controller was tested without D and I initially, car was not at all able to steer appropriately
+
+* With D and I, more stabiltity was brought to the car
+
+* Restricting the steering angle, helper in some random overshoots
+
+* Defining values for throttle based on the angle and spees, helper in the motion in cases of crisp turns
+
+* twiddle helps with the parameter tuning
+
+* Kp = 1.30, Ki = 0.01 and Kd = 6.02
+
+
+# Some concerns
+
+* Even after twiddle, the car was oscillating heavily
+
+* Need some better methods for parmeter tuning
