@@ -1,5 +1,7 @@
 #ifndef PID_H
 #define PID_H
+#include <iostream>
+#include <vector>
 
 class PID {
 public:
@@ -17,6 +19,17 @@ public:
   double Ki;
   double Kd;
 
+  bool isTwiddle;  // whether to apply twiddle or not
+  int step;        // count the number of steps
+  int max_step;    // maximum number of stpes before restart
+  const int buffer_step = 5;  
+  double err;       // stores the error
+  double best_error;  // best error for twiddle
+  std::vector<double> dp; // vector of possible changes to the coefficients
+
+  int n_gain;   // indicate which gain to tune
+  int n_tune;   // indicate the time of tuning
+
   /*
   * Constructor
   */
@@ -30,7 +43,7 @@ public:
   /*
   * Initialize PID.
   */
-  void Init(double Kp, double Ki, double Kd);
+  void Init(double Kp, double Ki, double Kd, bool tune=false);
 
   /*
   * Update the PID error variables given cross track error.
@@ -41,6 +54,8 @@ public:
   * Calculate the total PID error.
   */
   double TotalError();
+
+  std::vector<double> doTwiddle();
 };
 
 #endif /* PID_H */

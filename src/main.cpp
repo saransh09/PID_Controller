@@ -3,6 +3,7 @@
 #include "json.hpp"
 #include "PID.h"
 #include <math.h>
+#include <cstdlib>
 
 // for convenience
 using json = nlohmann::json;
@@ -28,12 +29,41 @@ std::string hasData(std::string s) {
   return "";
 }
 
-int main()
+int main(int argc, char ** argv)
 {
   uWS::Hub h;
 
   PID pid;
   // TODO: Initialize the pid variable.
+  double kp,ki,kd;
+  char *pEnd;
+  bool tune;
+  if(argc==5){
+    kp = std::strtod(argv[1],&pEnd);
+    ki = std::strtod(argv[2],&pEnd);
+    kd = std::strtod(argv[3],&pEnd);
+    if(std::atoi(argv[4])){
+      tune = true;
+      std::cout<<" Twiddle Mode!" << std::endl;
+    }
+    else{
+      tune = false;
+    }
+  }
+  else if(argc == 1){
+    kp = 1.30; // manually setting the parameters
+    ki = 0.01; // manually setting the parameters
+    kd = 6.02; // manually setting the parameters
+    tune = false;
+  }
+  else{
+    std::cout<<"Arguments missing, please enter the Kp,Ki and Kd initial params" << std::endl;
+    std::cout<<"./pid followed by Kp,Ki,Kd and TwiddleToggle(0/1) during the run command" << std::endl;
+    return -1;
+  }
+  std::cout << kp << "," << ki << "," << kd << std::endl;
+  pid.Init(kp,ki,kd,tune);
+
 
   h.onMessage([&pid](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
@@ -57,19 +87,52 @@ int main()
           * NOTE: Feel free to play around with the throttle and speed. Maybe use
           * another PID controller to control the speed!
           */
+          pid.UpdateError(cte);
+          steer_value = pid.TotalError();
+
+          // check for the overshooting of the steer value
+          if (steer_value < -1){
+            steer_value = -0.7;
+          }
+          if (steer_value > 1){
+            steer_value = 0.7;
+          }
+
+          // throttle conditions to maintain good speed for the car
+          double throttle;
+          if (fabs(angle) < 2.5 && speed < 25){
+            throttle = 0.8;
+          }
+          else if(fabs(angle) < 7.5){
+            throttle = 0.3;
+          }
+          else{
+            throttle = 0.1;
+          }
           
-          // DEBUG
-          std::cout << "CTE: " << cte << " Steering Value: " << steer_value << std::endl;
+          // DEBUG and twiddle mode
+          // std::cout << "CTE: " << cte << " Steering Value: " << steer_value << std::endl;
+          if(pid.isTwiddle && (pid.step > pid.max_step*50 || pid.err > pid.best_error*2)){  
+            std::vector<double> gain = pid.doTwiddle();
+            pid.Init(gain[0],gain[1],gain[2],true);
+            std::string reset_msg = "42[\"reset\",{}]";
+            std::cout << "Restart!" << std::endl;
+            ws.send(reset_msg.data(), reset_msg.length(), uWS::OpCode::TEXT);
+          }
+          std::cout << "Step: "<< pid.step << " CTE: " << cte << " Steering Value: " << steer_value << std::endl;
+          std::cout << "Kp: "<< pid.Kp << " Ki: " << pid.Ki << " Kd: " << pid.Kd << std::endl;
+          std::cout << "d_Kp: "<< pid.dp[0] << " d_Ki: " << pid.dp[1] << " Kd: " << pid.dp[2] << std::endl;
 
           json msgJson;
           msgJson["steering_angle"] = steer_value;
-          msgJson["throttle"] = 0.3;
+          msgJson["throttle"] = throttle;
           auto msg = "42[\"steer\"," + msgJson.dump() + "]";
           std::cout << msg << std::endl;
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
         }
       } else {
         // Manual driving
+        pid.step += 1;
         std::string msg = "42[\"manual\",{}]";
         ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
       }
