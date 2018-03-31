@@ -3,6 +3,15 @@
 This is a very basic implementation of a PID Controller, with an option to tune the hyperparameters of using Twiddle.
 The PID Controller uses CTE (Cross track error) to penalize the change in any particular quantity. In our application, we are using it to steer a car, so that, it can go through a track, without leaving the track. 
 
+
+# Explanation of the P,I and D terms
+
+1) <b>P: </b> This is the propotionality term, which takes into account the directly observable behaviour of he car, that is it makes the car steer solely based on the current cross track error, if the car is left f the lane center, it steers towards the right, and if the car is towards the right of the lane center it steers towards the left
+
+2) <b>I: </b> The integral term acts as a bias, which is used to reduce the systematic bias in the measurement of the cross track error, this is extremely useful towards the curves of the road, as during that time, the car tends to misbehave when only used with the Proportion and the Differential term
+
+3) <b>D: </b> The differential part takes into account the rate of change of the cross track error, this is particularly very helpful t check the overshoot of the steering angle, caused by the P term. This is specifically true, whenever there is a turn or the road curves. This also helps the car, reach he center of the lane more smoothly.
+
 # Explanation
 
 In this code, I have used some distinctive features, apart from what were actually taught in the lessons
